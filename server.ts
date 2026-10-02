@@ -12,7 +12,7 @@ const isProd = process.env.NODE_ENV === 'production';
 app.use(express.json());
 
 // Defensive Gemini API initialization
-const apiKey = process.env.GEMINI_API_KEY;
+const apiKey = process.env.GEMINI_API_KEY || process.env.VITE_GEMINI_API_KEY;
 let aiClient: GoogleGenAI | null = null;
 if (apiKey) {
   try {

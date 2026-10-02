@@ -76,43 +76,111 @@ export const ExpeditionAssistant: React.FC<ExpeditionAssistantProps> = ({
     setIsLoading(true);
 
     try {
-      const res = await fetch('/api/gemini/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          message: query,
-          mountainContext: selectedMountain
-            ? {
-                name: selectedMountain.name,
-                elevationM: selectedMountain.elevationM,
-                range: selectedMountain.range,
-                country: selectedMountain.country,
-                standardRoute: selectedMountain.standardRoute,
-                difficulty: selectedMountain.difficulty,
-                permitRequirements: selectedMountain.permitRequirements,
-              }
-            : null,
-          history: messages.slice(-5).map((m) => ({ sender: m.sender, text: m.text })),
-        }),
-      });
+      // First attempt: call backend API route
+      let backendSuccess = false;
+      try {
+        const res = await fetch('/api/gemini/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            message: query,
+            mountainContext: selectedMountain
+              ? {
+                  name: selectedMountain.name,
+                  elevationM: selectedMountain.elevationM,
+                  range: selectedMountain.range,
+                  country: selectedMountain.country,
+                  standardRoute: selectedMountain.standardRoute,
+                  difficulty: selectedMountain.difficulty,
+                  permitRequirements: selectedMountain.permitRequirements,
+                }
+              : null,
+            history: messages.slice(-5).map((m) => ({ sender: m.sender, text: m.text })),
+          }),
+        });
 
-      const data = await res.json();
+        // Ensure response is JSON and not 404 HTML from static hosts
+        const contentType = res.headers.get('content-type');
+        if (res.ok && contentType && contentType.includes('application/json')) {
+          const data = await res.json();
+          backendSuccess = true;
 
-      if (data.offline) {
-        setOfflineNotice('AI Assistant running in offline mode. Please add your Gemini API Key in settings.');
-      } else {
-        setOfflineNotice(null);
+          if (data.offline) {
+            setOfflineNotice('AI Assistant running in offline mode. Please add your Gemini API Key in settings.');
+          } else {
+            setOfflineNotice(null);
+          }
+
+          const botReply: ChatMessage = {
+            id: `bot-${Date.now()}`,
+            sender: 'assistant',
+            text: data.reply || data.fallbackReply || 'No response available.',
+            timestamp: Date.now(),
+            offline: !!data.offline,
+          };
+
+          setMessages((prev) => [...prev, botReply]);
+          return;
+        }
+      } catch (backendErr) {
+        // Backend unavailable (e.g. static hosting on Netlify)
+        backendSuccess = false;
       }
 
-      const botReply: ChatMessage = {
-        id: `bot-${Date.now()}`,
-        sender: 'assistant',
-        text: data.reply || data.fallbackReply || 'No response available.',
-        timestamp: Date.now(),
-        offline: !!data.offline,
-      };
+      // Fallback: If backend is not available (e.g. static deployment), check client environment key
+      const clientApiKey = import.meta.env.VITE_GEMINI_API_KEY || (import.meta.env as any).GEMINI_API_KEY;
+      if (clientApiKey) {
+        const promptText = `You are the Lead Expedition Director and Senior Alpinist of Global Mountain Explorer (GME).
+Advisory query: ${query}
+Active Mountain Focus: ${selectedMountain?.name || 'General Mountaineering'}
+Elevation: ${selectedMountain?.elevationM ? selectedMountain.elevationM + 'm' : 'N/A'}
+Range: ${selectedMountain?.range || 'Global'}
 
-      setMessages((prev) => [...prev, botReply]);
+Provide a structured, authoritative, and safety-focused response with practical guidance on routes, altitude sickness prevention, hydration, gear, and permits.`;
+
+        const geminiRes = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${clientApiKey}`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              contents: [{ parts: [{ text: promptText }] }],
+            }),
+          }
+        );
+
+        if (geminiRes.ok) {
+          const geminiData = await geminiRes.json();
+          const generatedText = geminiData.candidates?.[0]?.content?.parts?.[0]?.text;
+          if (generatedText) {
+            setOfflineNotice(null);
+            setMessages((prev) => [
+              ...prev,
+              {
+                id: `bot-${Date.now()}`,
+                sender: 'assistant',
+                text: generatedText,
+                timestamp: Date.now(),
+                offline: false,
+              },
+            ]);
+            return;
+          }
+        }
+      }
+
+      // Standard Graceful Offline Advisory Fallback
+      setOfflineNotice('AI Assistant running in offline mode. Please add your Gemini API Key in settings.');
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: `bot-offline-${Date.now()}`,
+          sender: 'assistant',
+          text: `AI Assistant is running in offline mode. Please add your Gemini API Key in settings.\n\nOffline Advisory for ${selectedMountain?.name || 'Mountaineering'}:\nAlways carry two-way satellite comms (inReach), hydrate with 4-5 liters daily (warm tea with electrolytes), acclimatize conservatively ("climb high, sleep low"), and verify mandatory permits with the relevant national park authorities.`,
+          timestamp: Date.now(),
+          offline: true,
+        },
+      ]);
     } catch (err: any) {
       console.warn('[GME AI Assistant] API query error:', err);
       setOfflineNotice('AI Assistant running in offline mode. Please add your Gemini API Key in settings.');
