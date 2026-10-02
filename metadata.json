@@ -1,0 +1,6 @@
+{
+  "name": "Global Mountain Explorer",
+  "description": "Unified global platform for mountain enthusiasts, climbers, researchers, and tourists featuring interactive 2D/3D maps, peak databases, logistics trackers, and an embedded AI expedition assistant.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
