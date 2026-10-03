@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Compass, Search, Map, Mountain as MountainIcon, BookOpen, Hotel, Calendar, Sparkles, Navigation, X } from 'lucide-react';
+import { Compass, Search, Map, Mountain as MountainIcon, BookOpen, Hotel, Calendar, Sparkles, Navigation, X, Settings } from 'lucide-react';
 import { Mountain } from '../../types/mountain';
 
 interface HeaderProps {
@@ -8,6 +8,7 @@ interface HeaderProps {
   mountains: Mountain[];
   onSelectMountain: (mountain: Mountain) => void;
   onRequestGeolocation: () => void;
+  onOpenSettings?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -16,6 +17,7 @@ export const Header: React.FC<HeaderProps> = ({
   mountains,
   onSelectMountain,
   onRequestGeolocation,
+  onOpenSettings,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchFocused, setSearchFocused] = useState(false);
@@ -56,6 +58,15 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
 
           <div className="flex items-center gap-3 shrink-0">
+            <button
+              onClick={onOpenSettings}
+              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 border border-amber-500/30 text-xs transition-colors cursor-pointer font-semibold"
+              title="Platform & AI Settings"
+            >
+              <Settings className="w-3.5 h-3.5 text-[#FF9F1C]" />
+              <span>Settings</span>
+            </button>
+            <span className="text-gray-400 hidden sm:inline">|</span>
             <button
               onClick={onRequestGeolocation}
               className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-white/10 hover:bg-white/20 text-white text-xs transition-colors cursor-pointer"
@@ -188,10 +199,27 @@ export const Header: React.FC<HeaderProps> = ({
               );
             })}
           </nav>
+
+          {/* Desktop AI Settings Button */}
+          <button
+            onClick={onOpenSettings}
+            className="hidden sm:inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-gray-700 hover:text-gray-950 hover:bg-amber-50 hover:border-amber-300 border border-gray-200 transition-all cursor-pointer shrink-0"
+            title="Configure Gemini API Key & Offline Mode"
+          >
+            <Settings className="w-4 h-4 text-[#FF9F1C]" />
+            <span className="hidden xl:inline">AI Settings</span>
+          </button>
         </div>
 
         {/* Mobile Navigation Row */}
         <div className="flex lg:hidden overflow-x-auto py-2.5 gap-2 border-t border-gray-100 no-scrollbar">
+          <button
+            onClick={onOpenSettings}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap shrink-0 transition-colors bg-amber-50 text-amber-950 border border-amber-200 cursor-pointer"
+          >
+            <Settings className="w-3.5 h-3.5 text-[#FF9F1C]" />
+            <span>Settings</span>
+          </button>
           {navItems.map((item) => {
             const Icon = item.icon;
             const isActive = activeTab === item.id;

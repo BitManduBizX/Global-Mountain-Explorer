@@ -40,15 +40,33 @@ app.get('/api/status', (_req, res) => {
 
 // Server-side Gemini AI Expedition Assistant endpoint
 app.post('/api/gemini/chat', async (req, res) => {
-  const { message, mountainContext, history } = req.body;
+  const { message, mountainContext, history, customApiKey } = req.body;
+  const headerKey = req.headers['x-gemini-api-key'] as string | undefined;
+  const effectiveKey = customApiKey || headerKey || apiKey;
 
   if (!message || typeof message !== 'string') {
     res.status(400).json({ error: 'Message is required' });
     return;
   }
 
+  let requestAiClient = aiClient;
+  if ((customApiKey || headerKey) && effectiveKey) {
+    try {
+      requestAiClient = new GoogleGenAI({
+        apiKey: effectiveKey,
+        httpOptions: {
+          headers: {
+            'User-Agent': 'aistudio-build',
+          },
+        },
+      });
+    } catch (err) {
+      console.warn('[GME Server] Could not initialize GoogleGenAI with custom key:', err);
+    }
+  }
+
   // Graceful offline fallback check
-  if (!apiKey || !aiClient) {
+  if (!effectiveKey || !requestAiClient) {
     res.status(200).json({
       offline: true,
       error: 'MISSING_KEY',
@@ -96,7 +114,7 @@ Instructions:
       ],
     });
 
-    const response = await aiClient.models.generateContent({
+    const response = await requestAiClient.models.generateContent({
       model: 'gemini-3.8-flash',
       contents: chatContents,
       config: {

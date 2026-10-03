@@ -10,6 +10,7 @@ import { PreparationHub } from './components/logistics/PreparationHub';
 import { TravelLodgingDirectory } from './components/directory/TravelLodgingDirectory';
 import { SeasonalityTracker } from './components/calendar/SeasonalityTracker';
 import { ExpeditionAssistant } from './components/ai/ExpeditionAssistant';
+import { SettingsModal } from './components/SettingsModal';
 import {
   GLOBAL_MOUNTAINS,
   MAJOR_MOUNTAIN_RANGES,
@@ -24,6 +25,7 @@ export default function App() {
   const [selectedMountain, setSelectedMountain] = useState<Mountain | null>(GLOBAL_MOUNTAINS[0]);
   const [threeDMountain, setThreeDMountain] = useState<Mountain | null>(null);
   const [isAIAssistantOpen, setIsAIAssistantOpen] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   // Consent Modal State
   const [consentModalState, setConsentModalState] = useState<{
@@ -132,6 +134,7 @@ export default function App() {
             setActiveTab('database');
           }}
           onRequestGeolocation={handleRequestGeolocation}
+          onOpenSettings={() => setIsSettingsOpen(true)}
         />
 
         {/* Nearest Peak Toast Notice */}
@@ -252,6 +255,14 @@ export default function App() {
           onClose={() => setIsAIAssistantOpen(false)}
           selectedMountain={selectedMountain}
           onClearSelectedMountain={() => setSelectedMountain(null)}
+          onOpenSettings={() => setIsSettingsOpen(true)}
+        />
+
+        {/* User-facing Platform & AI Settings Modal */}
+        <SettingsModal
+          isOpen={isSettingsOpen}
+          onClose={() => setIsSettingsOpen(false)}
+          onKeyUpdated={() => {}}
         />
 
         {/* Explicit Consent Guard Modal */}
